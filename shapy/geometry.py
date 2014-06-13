@@ -4,6 +4,7 @@
 import itertools, math
 import clipper,measure,pydraw
 from pydraw.geomhelper import _Line, _Bezier, _Arc, _Point
+from geointerface import GeoInterfaceMixin
 
 #global settings
 PRECISION = 1000000000
@@ -260,10 +261,11 @@ def geoj2geom(shapeobj):
             polylist = (exterior, interiors)
             multipolylist.append(polylist)
         geom = MultiPolygon(multipolylist)
+    geom.properties = geojson["properties"]
     return geom
 
 #define geometry classes
-class Point:
+class Point(GeoInterfaceMixin):
     #NOT FINISHED, LACKING SET THEORY METHODS
     def __init__(self, x, y):
         """
@@ -286,14 +288,6 @@ class Point:
         self.x = x
         self.y = y
     ### Properties
-    @property
-    def __geo_interface__(self):
-        geojson = dict()
-        coords = self.coords
-        #set dict items
-        geojson["type"] = self.geom_type
-        geojson["coordinates"] = coords[0]
-        return geojson
     ### Constructive methods
     def buffer(self, buffersize, jointype="round", resolution=0.75):
         # for points use the _DoRound(pt, limit) function from inside _OffsetInternal
@@ -372,7 +366,7 @@ class Point:
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
 
-class MultiPoint:
+class MultiPoint(GeoInterfaceMixin):
     #NOT FINISHED
     def __init__(self, points):
         """
@@ -387,14 +381,6 @@ class MultiPoint:
         self.area = 0.0
         self.length = 0.0
     ### Properties
-    @property
-    def __geo_interface__(self):
-        geojson = dict()
-        coords = [geom.coords[0] for geom in self.geoms]
-        #set dict items
-        geojson["type"] = self.geom_type
-        geojson["coordinates"] = coords
-        return geojson
     @property
     def bounds(self):
         _x,_y = self.geoms[0].coords[0]
@@ -495,7 +481,7 @@ class MultiPoint:
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
         
-class LineString:
+class LineString(GeoInterfaceMixin):
     #NOT FINISHED, LACKING SET THEORY METHODS
     def __init__(self, coordinates):
         """
@@ -517,14 +503,6 @@ class LineString:
         self.area = 0.0
         self.bounds = _bounds
     ### Properties
-    @property
-    def __geo_interface__(self):
-        geojson = dict()
-        coords = self.coords
-        #set dict items
-        geojson["type"] = self.geom_type
-        geojson["coordinates"] = coords
-        return geojson
     @property
     def length(self):
         hypot = math.hypot
@@ -728,7 +706,7 @@ class LineString:
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
 
-class MultiLineString:
+class MultiLineString(GeoInterfaceMixin):
     #NOT FINISHED, LACKING SET THEORY METHODS
     def __init__(self, lines):
         """
@@ -743,17 +721,6 @@ class MultiLineString:
             geoms.append( LineString(line) )
         self.geoms = geoms
     ### Properties
-    @property
-    def __geo_interface__(self):
-        geojson = dict()
-        coords = []
-        for geom in self.geoms:
-            eachmulticoords = geom.coords
-            coords.append(eachmulticoords)
-        #set dict items
-        geojson["type"] = self.geom_type
-        geojson["coordinates"] = coords
-        return geojson
     @property
     def area(self):
         sumarea = 0
@@ -824,7 +791,7 @@ class MultiLineString:
         img.drawgeojson(self, fillcolor=fillcolor, outlinecolor=outlinecolor)
         img.view()
         
-class LinearRing:
+class LinearRing(GeoInterfaceMixin):
     def __init__(self, coordinates, counterclockwise=False):
         """
         Not really of interest, mostly just a helper for polygons.
@@ -877,7 +844,7 @@ class LinearRing:
             length += _linelength
         return length
 
-class Polygon:
+class Polygon(GeoInterfaceMixin):
     def __init__(self, exterior, interiors=[]):
         """
 
@@ -890,17 +857,6 @@ class Polygon:
         self.exterior = LinearRing(exterior)
         self.interiors = [LinearRing(hole, counterclockwise=True) for hole in interiors]
     ### Properties
-    @property
-    def __geo_interface__(self):
-        geojson = dict()
-        coords = [self.exterior.coords]
-        _holes = [hole.coords for hole in self.interiors]
-        if _holes:
-            coords.extend(_holes)
-        #set dict items
-        geojson["type"] = self.geom_type
-        geojson["coordinates"] = coords
-        return geojson
     @property
     def area(self):
         sumarea = self.exterior.area
@@ -1015,7 +971,7 @@ class Polygon:
         for outer_or_hole in preppedcoords:
             clipperobj.AddPolygon(outer_or_hole, addtype)
 
-class MultiPolygon:
+class MultiPolygon(GeoInterfaceMixin):
     def __init__(self, polygons):
         """
 
@@ -1031,23 +987,6 @@ class MultiPolygon:
             geoms.append( Polygon(exterior, holes) )
         self.geoms = geoms
     ### Properties
-    @property
-    def __geo_interface__(self):
-        """
-        Returns the geojson dictionary representation of the geometry.
-        """
-        geojson = dict()
-        coords = []
-        for geom in self.geoms:
-            eachmulticoords = [geom.exterior.coords]
-            _holes = [hole.coords for hole in geom.interiors]
-            if _holes:
-                eachmulticoords.extend(_holes)
-            coords.append(eachmulticoords)
-        #set dict items
-        geojson["type"] = self.geom_type
-        geojson["coordinates"] = coords
-        return geojson
     @property
     def area(self):
         """
