@@ -67,5 +67,6 @@ class GeoInterfaceMixin():
         geojson = {}
         geojson.update(self.__get_geo_interface_geodata__())
         geojson.update(self.__get_geo_interface_bbox__())
-        geojson.update(self.__get_geo_interface_properties__())
+        if hasattr(self, 'properties'):
+            geojson.update(self.__get_geo_interface_properties__())
         return geojson
